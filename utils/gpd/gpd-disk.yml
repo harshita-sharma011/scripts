@@ -1,0 +1,30 @@
+---
+- hosts: localhost
+  connection: local
+
+  
+  tasks:
+    - block:
+ 
+        - name: Fetch nodes
+          shell: kubectl top nodes | tail -n +2 | awk '{print $1}' 
+          register: nodes
+
+        - name: Create disks
+          shell: gcloud compute disks create "harshita-disk-{{ item }}" --size=30GB --zone=us-central1-c
+          with_items:
+          - [1,2,3]
+ 
+        - name: Attach disks
+          shell: gcloud compute instances attach-disk {{ item.0 }} --disk "harshita-disk-{{ item.1 }}" --zone=us-central1-c --device-name="harshita-disks-{{ item.1 }}"
+          with_together: 
+          - "{{ nodes.stdout_lines }}"
+          - [1,2,3]
+        
+        - set_fact:
+            flag: "Pass"
+
+      rescue:
+        - name: Setting fail flag
+          set_fact:
+            flag: "Fail"
